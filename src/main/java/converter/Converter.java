@@ -1,5 +1,11 @@
 package converter;
 
+import org.locationtech.proj4j.CRSFactory;
+import org.locationtech.proj4j.CoordinateReferenceSystem;
+import org.locationtech.proj4j.CoordinateTransform;
+import org.locationtech.proj4j.CoordinateTransformFactory;
+import org.locationtech.proj4j.ProjCoordinate;
+
 public class Converter {
 
     private static final double pi = Math.PI; // Число Пи
@@ -35,57 +41,24 @@ public class Converter {
     private static final double ms = 0;
 
     public static void main(String[] args) {
-
-        // SK42 to WGS84
-        // could be checked at 
-        // https://nadra.gov.ua/area/appcalculation
         
-        System.out.println("" + SK42_WGS84_Lat(44, 22, 0) + " - " + decimalToDMS(SK42_WGS84_Lat(44, 22, 0)));
-        System.out.println("" + SK42_WGS84_Long(44, 22, 0) + " - " + decimalToDMS(SK42_WGS84_Long(44, 22, 0)));
+        double lon = 7432454.0;
+        double lat = 5483622.0;
+        
+        CRSFactory crsFactory = new CRSFactory();
+        CoordinateReferenceSystem inputCoordSystem = crsFactory.createFromName("epsg:20007");
+        CoordinateReferenceSystem outputCoordSystem = crsFactory.createFromName("epsg:4284");
+        
+        CoordinateTransformFactory ctFactory = new CoordinateTransformFactory();
+        CoordinateTransform wgsToUtm = ctFactory.createTransform(inputCoordSystem, outputCoordSystem);
+        // `result` is an output parameter to `transform()`
+        ProjCoordinate result = new ProjCoordinate();
+        wgsToUtm.transform(new ProjCoordinate(lon, lat), result);
+        
+        System.out.println(result.x + " - " + decimalToDMS(result.x));
+        System.out.println(result.y + " - " + decimalToDMS(result.y));
     }
 
-    public static double WGS84_SK42_Lat(double Bd, double Ld, double H) {
-        return Bd - dB(Bd, Ld, H) / 3600.0;
-    }
-
-    public static double WGS84_SK42_Long(double Bd, double Ld, double H) {
-        return Ld - dL(Bd, Ld, H) / 3600.0;
-    }
-    
-    public static double SK42_WGS84_Lat(double Bd, double Ld, double H) {
-        return Bd + dB(Bd, Ld, H) / 3600.0;
-    }
-
-    public static double SK42_WGS84_Long(double Bd, double Ld, double H) {
-        return Ld + dL(Bd, Ld, H) / 3600.0;
-    }
-
-    public static double dB(double Bd, double Ld, double H) {
-        double B = Bd * pi / 180;
-        double L = Ld * pi / 180;
-        double M = a * (1 - e2) / Math.pow((1 - e2 * Math.pow(Math.sin(B), 2)), 1.5);
-        double N = a * Math.pow((1 - e2 * Math.pow(Math.sin(B), 2)), -0.5);
-        double dB = ro / (M + H)
-                * (N / a * e2 * Math.sin(B) * Math.cos(B) * da
-                        + (Math.pow(N, 2) / Math.pow(a, 2) + 1) * N * Math.sin(B) * Math.cos(B) * de2 / 2
-                        - (dx * Math.cos(L) + dy * Math.sin(L)) * Math.sin(B) + dz * Math.cos(B))
-                - wx * Math.sin(L) * (1 + e2 * Math.cos(2 * B)) + wy * Math.cos(L) * (1 + e2 * Math.cos(2 * B))
-                - ro * ms * e2 * Math.sin(B) * Math.cos(B);
-
-        return dB;
-    }
-
-    public static double dL(double Bd, double Ld, double H) {
-        double B = Bd * pi / 180;
-        double L = Ld * pi / 180;
-        double N = a * Math.pow((1 - e2 * Math.pow(Math.sin(B), 2)), -0.5);
-
-        double dL = ro / ((N + H) * Math.cos(B)) * (-dx * Math.sin(L) + dy * Math.cos(L))
-                + Math.tan(B) * (1 - e2) * (wx * Math.cos(L) + wy * Math.sin(L)) - wz;
-
-        return dL;
-    }
-    
     private static String decimalToDMS(double coord) {
 
         double mod = coord % 1;
